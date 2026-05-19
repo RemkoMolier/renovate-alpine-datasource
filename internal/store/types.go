@@ -50,10 +50,12 @@ type Manifest struct {
 
 // RepoTag holds the conditional-request state for a single (branch, repo)
 // combination (§9). Consumers use ETag / LastModified for HTTP conditional
-// requests so they don't re-fetch unchanged APKINDEX data.
+// requests and CommitDesc for DESCRIPTION short-circuiting so they don't
+// re-fetch unchanged APKINDEX data.
 type RepoTag struct {
-	ETag    string `json:"etag"`
-	LastMod string `json:"lastModified"`
+	ETag       string `json:"etag"`
+	LastMod    string `json:"lastModified"`
+	CommitDesc string `json:"commitDesc"`
 }
 
 // Stats holds aggregate counts describing the store contents.
