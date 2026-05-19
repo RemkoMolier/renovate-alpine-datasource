@@ -63,5 +63,5 @@ type Stats struct {
 	Branches int `json:"branches"`
 }
 
-// Now returns the current UTC time. Package-level var so tests can override it.
-var Now = func() time.Time { return time.Now().UTC() }
+// now returns the current UTC time. Package-level var so tests can override it.
+var now = func() time.Time { return time.Now().UTC() }

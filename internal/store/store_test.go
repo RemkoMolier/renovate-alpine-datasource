@@ -438,6 +438,27 @@ func TestReleaseJSONShape(t *testing.T) {
 	}
 }
 
+func TestReplaceUsesArgumentRepo(t *testing.T) {
+	// If a caller passes records with a mismatched Repo field, the Release.Repo
+	// must still come from the Replace repo argument (single source of truth).
+	s := New()
+	s.Replace("v3.23", "main", []Record{
+		{Name: "foo", Origin: "foo", Version: "v1", Repo: "community", BuildTS: 100},
+	})
+
+	doc, ok := s.Get("v3.23", "foo")
+	if !ok {
+		t.Fatal("Get must return true")
+	}
+	if len(doc.Releases) != 1 {
+		t.Fatalf("want 1 release, got %d", len(doc.Releases))
+	}
+	if doc.Releases[0].Repo != "main" {
+		t.Errorf("Release.Repo must be the argument (main), not the record value (community), got %q",
+			doc.Releases[0].Repo)
+	}
+}
+
 func TestRaceGetDuringReplace(t *testing.T) {
 	// Parallel Get calls during a Replace must not panic and must always see a
 	// consistent snapshot (§N7).

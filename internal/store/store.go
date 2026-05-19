@@ -87,7 +87,7 @@ func (s *Store) Replace(branch, repo string, records []Record) {
 		}
 		rel := Release{
 			Version:          r.Version,
-			Repo:             r.Repo,
+			Repo:             repo,
 			ReleaseTimestamp: r.BuildTS,
 		}
 		s.data[r.Origin][key] = append(s.data[r.Origin][key], rel)
@@ -141,7 +141,7 @@ func (s *Store) Manifest() Manifest {
 	}
 
 	m := Manifest{
-		Generated:    Now().Format("2006-01-02T15:04:05Z"),
+		Generated:    now().Format("2006-01-02T15:04:05Z"),
 		PackageCount: len(pkgVersions),
 	}
 
