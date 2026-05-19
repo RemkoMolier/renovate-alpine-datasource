@@ -6,19 +6,18 @@ import (
 	"testing"
 )
 
-func makeRecords(branch, repo string, entries ...struct {
-	pkg, origin, version string
-	ts                   int64
+func makeRecords(repo string, entries ...struct {
+	name, origin, version string
+	ts                    int64
 }) []Record {
 	recs := make([]Record, len(entries))
 	for i, e := range entries {
 		recs[i] = Record{
-			Package:          e.pkg,
-			Origin:           e.origin,
-			Version:          e.version,
-			Branch:           branch,
-			Repo:             repo,
-			ReleaseTimestamp: e.ts,
+			Name:    e.name,
+			Origin:  e.origin,
+			Version: e.version,
+			Repo:    repo,
+			BuildTS: e.ts,
 		}
 	}
 	return recs
@@ -68,14 +67,14 @@ func TestManifestEmptyStore(t *testing.T) {
 
 func TestReplaceAndGet(t *testing.T) {
 	s := New()
-	recs := makeRecords("v3.23", "main",
+	recs := makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "1.0.0", 100},
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "1.1.0", 200},
 	)
 	s.Replace("v3.23", "main", recs)
@@ -91,10 +90,10 @@ func TestReplaceAndGet(t *testing.T) {
 
 func TestGetWrongBranch(t *testing.T) {
 	s := New()
-	recs := makeRecords("v3.23", "main",
+	recs := makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "1.0.0", 100},
 	)
 	s.Replace("v3.23", "main", recs)
@@ -107,10 +106,10 @@ func TestGetWrongBranch(t *testing.T) {
 
 func TestGetWrongOrigin(t *testing.T) {
 	s := New()
-	recs := makeRecords("v3.23", "main",
+	recs := makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "1.0.0", 100},
 	)
 	s.Replace("v3.23", "main", recs)
@@ -128,14 +127,14 @@ func TestRevocation(t *testing.T) {
 	s := New()
 
 	// Round 1.
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1", 100},
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v2", 200},
 	))
 
@@ -148,10 +147,10 @@ func TestRevocation(t *testing.T) {
 	}
 
 	// Round 2: v1 is revoked — only v2 remains.
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v2", 200},
 	))
 
@@ -167,10 +166,10 @@ func TestRevocation(t *testing.T) {
 	}
 
 	// Round 3: add releases on a different branch — v3.23 data must be intact.
-	s.Replace("v3.24", "main", makeRecords("v3.24", "main",
+	s.Replace("v3.24", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v3", 300},
 	))
 
@@ -195,8 +194,8 @@ func TestSubpackageFold(t *testing.T) {
 	// §4.4: packages sharing the same origin must be folded under that origin.
 	s := New()
 	recs := []Record{
-		{Package: "foo", Origin: "foo", Version: "1.0", Branch: "v3.23", Repo: "main", ReleaseTimestamp: 100},
-		{Package: "foo-dev", Origin: "foo", Version: "1.0", Branch: "v3.23", Repo: "main", ReleaseTimestamp: 100},
+		{Name: "foo", Origin: "foo", Version: "1.0", Repo: "main", BuildTS: 100},
+		{Name: "foo-dev", Origin: "foo", Version: "1.0", Repo: "main", BuildTS: 100},
 	}
 	s.Replace("v3.23", "main", recs)
 
@@ -218,16 +217,16 @@ func TestSubpackageFold(t *testing.T) {
 func TestMultiRepoFold(t *testing.T) {
 	// Releases from different repos on the same branch fold together.
 	s := New()
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1", 100},
 	))
-	s.Replace("v3.23", "community", makeRecords("v3.23", "community",
+	s.Replace("v3.23", "community", makeRecords("community",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v2", 200},
 	))
 
@@ -243,10 +242,10 @@ func TestMultiRepoFold(t *testing.T) {
 func TestEmptyReplaceClears(t *testing.T) {
 	// Replacing with empty records must clear all releases for that (branch, repo).
 	s := New()
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1", 100},
 	))
 	s.Replace("v3.23", "main", nil)
@@ -261,24 +260,24 @@ func TestReplaceIsAtomic(t *testing.T) {
 	// A partial Replace must not leave the store in an inconsistent state.
 	// Here we verify that replacing a repo only affects that repo's data.
 	s := New()
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1", 100},
 	))
-	s.Replace("v3.23", "community", makeRecords("v3.23", "community",
+	s.Replace("v3.23", "community", makeRecords("community",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v2", 200},
 	))
 
 	// Replace only main — community data must survive.
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v3", 300},
 	))
 
@@ -308,20 +307,20 @@ func TestReplaceIsAtomic(t *testing.T) {
 
 func TestStats(t *testing.T) {
 	s := New()
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1", 100},
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"bar", "bar", "v1", 100},
 	))
-	s.Replace("v3.24", "community", makeRecords("v3.24", "community",
+	s.Replace("v3.24", "community", makeRecords("community",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v2", 200},
 	))
 
@@ -339,20 +338,20 @@ func TestStats(t *testing.T) {
 
 func TestManifest(t *testing.T) {
 	s := New()
-	s.Replace("v3.24", "main", makeRecords("v3.24", "main",
+	s.Replace("v3.24", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1.0", 100},
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"foo", "foo", "v1.1", 200},
 	))
-	s.Replace("v3.23", "main", makeRecords("v3.23", "main",
+	s.Replace("v3.23", "main", makeRecords("main",
 		struct {
-			pkg, origin, version string
-			ts                   int64
+			name, origin, version string
+			ts                    int64
 		}{"bar", "bar", "v2.0", 300},
 	))
 
@@ -448,12 +447,11 @@ func TestRaceGetDuringReplace(t *testing.T) {
 	recs := make([]Record, 50)
 	for i := range recs {
 		recs[i] = Record{
-			Package:          "pkg",
-			Origin:           "pkg",
-			Version:          "v" + string(rune('0'+i%10)),
-			Branch:           "edge",
-			Repo:             "main",
-			ReleaseTimestamp: int64(i),
+			Name:    "pkg",
+			Origin:  "pkg",
+			Version: "v" + string(rune('0'+i%10)),
+			Repo:    "main",
+			BuildTS: int64(i),
 		}
 	}
 	s.Replace("edge", "main", recs)
@@ -468,12 +466,11 @@ func TestRaceGetDuringReplace(t *testing.T) {
 			ri := make([]Record, i%10+1)
 			for j := range ri {
 				ri[j] = Record{
-					Package:          "pkg",
-					Origin:           "pkg",
-					Version:          "v" + string(rune('0'+(i+j)%10)),
-					Branch:           "edge",
-					Repo:             "main",
-					ReleaseTimestamp: int64(i*100 + j),
+					Name:    "pkg",
+					Origin:  "pkg",
+					Version: "v" + string(rune('0'+(i+j)%10)),
+					Repo:    "main",
+					BuildTS: int64(i*100 + j),
 				}
 			}
 			s.Replace("edge", "main", ri)

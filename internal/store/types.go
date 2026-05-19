@@ -5,15 +5,17 @@ package store
 
 import "time"
 
-// Record is a parsed APKINDEX entry. Once internal/apkindex lands (#3) this
-// will be imported from there; for now it lives here as a compatible struct.
+// Record is an orchestrator-enriched APKINDEX entry. The Name, Version, Origin,
+// URL, and BuildTS fields mirror apkindex.Record (once #3 lands this will be
+// imported from there). Repo is set by the orchestrator and tells Replace which
+// repository the record came from; it is not part of the APKINDEX data model.
 type Record struct {
-	Package          string
-	Origin           string
-	Version          string
-	Branch           string
-	Repo             string
-	ReleaseTimestamp int64
+	Name    string // APKINDEX package name (may differ from Origin for subpackages)
+	Origin  string
+	Version string
+	URL     string
+	BuildTS int64
+	Repo    string
 }
 
 // Release is a single release in a PkgDoc. Branch is deliberately excluded from

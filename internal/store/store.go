@@ -37,11 +37,14 @@ func (s *Store) Ready() bool {
 	return s.ready
 }
 
-// MarkReady marks the store as ready. Once marked, the store cannot be unmarked.
+// MarkReady marks the store as ready. Readiness is monotonic: once set, it
+// stays set regardless of further calls.
 func (s *Store) MarkReady() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.ready = true
+	if !s.ready {
+		s.ready = true
+	}
 }
 
 // Replace drops the (branch, repo) slice for every affected origin and rebuilds
@@ -85,7 +88,7 @@ func (s *Store) Replace(branch, repo string, records []Record) {
 		rel := Release{
 			Version:          r.Version,
 			Repo:             r.Repo,
-			ReleaseTimestamp: r.ReleaseTimestamp,
+			ReleaseTimestamp: r.BuildTS,
 		}
 		s.data[r.Origin][key] = append(s.data[r.Origin][key], rel)
 	}
