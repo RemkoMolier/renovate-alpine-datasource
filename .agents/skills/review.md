@@ -145,3 +145,4 @@ gh api repos/$GH_OWNER/$GH_REPO/pulls/<n>/comments/<comment-id>/replies -X POST 
 - Reviewing a PR over the size cap without first requesting a split.
 - Drip-feeding single comments instead of batching one review.
 - Approving an agent-produced PR without running the Five red-flag pass.
+- **Editing the PR description, pushing fixup commits to the author's branch, or otherwise amending the author's work** — every change to the PR goes through the author, even typos. See AGENTS.md → *PR conventions → Reviewer scope*.
