@@ -21,17 +21,15 @@ const (
 	shutdownTimeout = 5 * time.Second
 )
 
-var exitFunc = os.Exit
-
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	if err := run(signalCtx, newServer(api.New()), logger); err != nil {
 		logger.Error("http server stopped unexpectedly", slog.Any("error", err))
-		exitFunc(1)
+		os.Exit(1)
 	}
 }
 

@@ -28,3 +28,4 @@ exclude:
     # Entrypoint — not unit-testable in isolation. Exercised via integration
     # tests once they exist.
     - ^main\.go$
+    - ^cmd/renovate-alpine-datasource/main\.go$
