@@ -327,8 +327,12 @@ func TestSweepErrorsJoin(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	// errors.Join returns an error wrapping each individual error.
-	errs := err.(interface{ Unwrap() []error }).Unwrap()
+	// errors.Join returns an error that implements Unwrap() []error.
+	unwrap, ok := err.(interface{ Unwrap() []error })
+	if !ok {
+		t.Fatalf("expected Unwrap() []error, got %T", err)
+	}
+	errs := unwrap.Unwrap()
 	if len(errs) != 4 {
 		t.Errorf("expected 4 errors (2 branches × 2 repos), got %d", len(errs))
 	}
