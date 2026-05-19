@@ -1,0 +1,30 @@
+# Coverage thresholds enforced in CI by vladopajic/go-test-coverage.
+# Run locally with (no install needed; go run caches the pinned version):
+#   go test -race -count=1 -coverprofile=cover.out ./...
+#   go run github.com/vladopajic/go-test-coverage/v2@v2.18.8 --config ./.testcoverage.yml
+
+profile: cover.out
+
+# Trim this from package paths in the coverage report so it's readable.
+local-prefix: github.com/RemkoMolier/renovate-alpine-datasource
+
+threshold:
+  # Per-file minimum. 0 disables per-file enforcement; the package threshold
+  # already catches files that drag a package below the bar.
+  file: 0
+
+  # Per-package minimum. New code added to any package must keep that package
+  # above this line — in a greenfield repo this behaves like patch coverage:
+  # new packages start at 0%, so they must ship with tests to clear the gate.
+  package: 80
+
+  # Total project minimum. Starts at 0 while the project is bootstrapping
+  # and only one entrypoint exists; ratchet upward as the codebase grows.
+  total: 0
+
+# Files / paths excluded from coverage enforcement entirely.
+exclude:
+  paths:
+    # Entrypoint — not unit-testable in isolation. Exercised via integration
+    # tests once they exist.
+    - ^main\.go$

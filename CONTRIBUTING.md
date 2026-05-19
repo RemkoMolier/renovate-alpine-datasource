@@ -8,12 +8,16 @@ Thanks for considering a contribution. This project is a [Renovate](https://docs
 
 We track the latest released Go version and the one before it (mirroring [Go's own support window](https://go.dev/doc/devel/release#policy)). When a new Go minor version is released, the floor moves up.
 
-## Build and test
+## Build, test, lint, coverage
+
+The [`Makefile`](Makefile) wraps every check. No separate install of `golangci-lint` or `go-test-coverage` is needed — both run via pinned `go run` invocations.
 
 ```sh
-go build ./...
-go test ./...
+make help     # list every target
+make verify   # build + vet + test + lint + coverage gate (run before opening any PR)
 ```
+
+Individual targets: `make build`, `make vet`, `make test`, `make lint`, `make coverage`, `make fmt`, `make tidy`.
 
 ## Commit messages
 

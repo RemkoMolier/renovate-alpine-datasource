@@ -1,0 +1,104 @@
+name: Agent task
+description: A scoped, well-specified change to be implemented by an AI coding agent
+labels: ["agent-task", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for work you want an AI agent to pick up.
+
+        **Routing**: after filing, dispatch by:
+        - Assigning the issue to **Copilot** → Copilot's coding agent picks it up.
+        - Adding the **`openhands`** label (or commenting `@openhands ...`) → OpenHands Cloud picks it up.
+        - Otherwise → the maintainer handles it.
+
+        The body of this issue is the spec. The acting agent will draft its implementation **plan** as a checklist in the PR body, not here.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this change matters. Background, motivating use case, links to related issues or upstream docs. One paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: A precise statement of what's wrong or missing today. Avoid prescribing the solution here — that goes in Acceptance Criteria.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Specific, testable conditions that define this change as complete. One per line. The agent will tick these off in commits.
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of Done
+      description: Universal shippability gates. Strike through (`~~- [ ] ...~~`) any line that genuinely does not apply, with a one-line rationale.
+      value: |
+        - [ ] `make verify` passes locally (build, vet, test, lint, coverage gate)
+        - [ ] PR title is a valid Conventional Commit, and is about *why* (not *what*)
+        - [ ] `## Why` in the PR body explains the motivation (it becomes the squash-merge commit body)
+        - [ ] Documentation updated if user-visible behavior or API changed
+        - [ ] No `Co-Authored-By:` lines for AI assistants
+        - [ ] All Acceptance Criteria boxes ticked
+        - [ ] PR is **one concern**, reviewable in one sitting, independently revertable, with self-contained tests (LOC > ~200 is a warning sign — audit against these criteria and flag in the PR body with rationale if the overrun is justified)
+    validations:
+      required: true
+
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: Files in scope
+      description: Files or directories the agent is expected to touch.
+      placeholder: |
+        - `main.go`
+        - `internal/apk/`
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Files out of scope / do not touch
+      description: Explicitly off-limits. Things that look related but should not be modified in this PR.
+      value: |
+        - `.github/dependabot.yml`
+        - `LICENSE`
+        - Anything not listed in *Files in scope*
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: The exact commands the agent should run to demonstrate the change works. Outputs of these go in the PR description.
+      value: |
+        ```sh
+        go build ./...
+        go test -race -count=1 ./...
+        golangci-lint run
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes & hints
+      description: Anything else useful — non-goals, design hints, references, similar prior work in the repo, gotchas.
+    validations:
+      required: false
