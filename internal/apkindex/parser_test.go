@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"io"
 	"strings"
 	"testing"
 )
@@ -127,7 +128,7 @@ func TestParseSimple(t *testing.T) {
 				t.Errorf("URL: want %q, got %q", tt.url, r.URL)
 			}
 			if r.BuildTS != tt.buildTS {
-				t.Errorf("BuildTS: want %d, got %d", tt.buildTS, tt.buildTS)
+				t.Errorf("BuildTS: want %d, got %d", tt.buildTS, r.BuildTS)
 			}
 		})
 	}
@@ -312,32 +313,53 @@ func TestParseNonGzipInput(t *testing.T) {
 	}
 }
 
-// Verify that Parse does not use io.ReadAll — the parse path works with
-// a reader that panics if io.ReadAll is called on it.
+// readAllGuard wraps an io.Reader and panics if a single Read call
+// requests a buffer whose capacity exceeds maxBuf — this catches
+// io.ReadAll-style bulk reads that grow a buffer to hold all data.
+type readAllGuard struct {
+	r      io.Reader
+	maxBuf int
+}
+
+func (g *readAllGuard) Read(p []byte) (int, error) {
+	if cap(p) > g.maxBuf {
+		panic("readAllGuard: Read called with buffer capacity > maxBuf — bulk read detected")
+	}
+	return g.r.Read(p)
+}
+
+// TestParseStreamingNoReadAll verifies that Parse does not use io.ReadAll
+// (or equivalent bulk-read strategies) internally. It wraps the input in a
+// readAllGuard with a 4096-byte cap and uses a payload large enough that
+// io.ReadAll would trip the guard during its buffer-growth loop.
 func TestParseStreamingNoReadAll(t *testing.T) {
-	apkindex := strings.Join([]string{
-		"P:test",
-		"V:1.0",
-		"",
-	}, "\n") + "\n"
+	// Build a payload large enough (~20 KB) to force io.ReadAll to grow
+	// its internal buffer past the 4096-byte guard threshold.
+	var records []string
+	for i := range 450 {
+		records = append(records,
+			"P:pkg"+string(rune('a'+i%26))+string(rune('a'+(i/26)%26)),
+			"V:1.0",
+			"",
+		)
+	}
+	apkindex := strings.Join(records, "\n") + "\n"
 
 	data := buildTarGz(map[string]string{
 		"APKINDEX":    apkindex,
 		"DESCRIPTION": "commit\n",
 	})
 
-	// Wrap the data in a reader that tracks whether ReadAll was attempted.
-	// We can't actually prevent ReadAll, but we ensure Parse works on
-	// the raw gzip stream which is large enough to require streaming.
-	records, desc, err := Parse(bytes.NewReader(data))
+	// Wrap in guard: any Read with cap > 4096 panics.
+	gr := &readAllGuard{r: bytes.NewReader(data), maxBuf: 4096}
+	recordsOut, desc, err := Parse(gr)
 	if err != nil {
 		t.Fatalf("Parse: unexpected error: %v", err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("records: want 1, got %d", len(records))
+	if len(recordsOut) != 450 {
+		t.Fatalf("records: want 450, got %d", len(recordsOut))
 	}
 	if desc != "commit" {
 		t.Errorf("DESCRIPTION: want %q, got %q", "commit", desc)
 	}
-
 }
