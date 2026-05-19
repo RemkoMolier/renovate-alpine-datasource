@@ -60,7 +60,9 @@ Prefer minimal, surgical changes over broad refactors. If you find yourself fixi
 - **TDD is the norm for behavior-changing work.** Write a failing test first, watch it fail, then write the minimum code to make it pass. The **coverage gate** (CI; thresholds in `.testcoverage.yml`) mechanically enforces that new packages have tests — patch-coverage-like in a greenfield repo, since a new package without tests starts at 0% and fails the 80% package threshold. Exceptions (refactor / docs / build / dep-bump / test-only) are called out in the PR's `## Why` section. Procedure in [`.agents/skills/tdd.md`](.agents/skills/tdd.md).
 - **CI green is a merge prerequisite.** A PR does not merge while any of the `Test (Go 1.25)`, `Test (Go 1.26)`, `Lint`, `Coverage`, or `PR title / Validate Conventional Commits format` checks are red. Branch protection on `main` enforces this — see the [branch protection note](#branch-protection-on-main) below.
 - **SHA-pin every new GitHub Action.** Format: `org/repo@<full-commit-sha> # vX.Y.Z`. The trailing version comment is what Renovate / Dependabot use to surface updates. See [Adding a GitHub Action](#recipe-adding-a-github-action) for the exact procedure.
-- **No `Co-Authored-By:` lines for AI assistants.** Commits are attributed to the human author only.
+- **AI-assistant attribution.** For commits *you* author (with AI assistance from Claude, Cursor, IDE Copilot completion, etc.), do not add `Co-Authored-By:` lines for the AI — the human is the sole author. Bot-authored PRs from agents that produce their own commits (Copilot's coding agent, OpenHands Cloud) are different: those commits' `Author` is the bot, with the human assigner appended as `Co-authored-by:`. That pattern is allowed and preserves the audit trail of which agent did the work.
+- **Reviewer scope.** Reviewers only leave feedback — comments, suggestion blocks, and an approve / request-changes / comment verdict. They do **not** edit the PR description, push fixup commits to the author's branch, or otherwise amend the author's work. Every change to the PR goes through the author (or the dispatched agent), even typos. The agent or human author owns the PR end-to-end. See [`.agents/skills/review.md`](.agents/skills/review.md).
+- **Squash-merge commit body comes from the PR's `## Why` section.** The repo is configured with `squash_merge_commit_title = PR_TITLE` and `squash_merge_commit_message = PR_BODY`, so the merged commit on `main` is `<conventional commit title>` + the PR body. The alternative (`COMMIT_MESSAGES`) concatenates every branch commit including bot placeholder commits, debug trailers, and duplicate `Co-authored-by` lines — not the history we want.
 - **PRs are one concern, reviewable in one sitting, independently revertable, with self-contained tests.** Prefer vertical slices (a thin end-to-end change) over horizontal layers (build the data model first, then the API, then the wiring) — vertical slices ship value and get exercised end-to-end; horizontal layers batch risk. PRs over ~200 LOC of diff are a warning sign to audit against these criteria; flag in the description with rationale if you decided the overrun was justified (e.g. cohesive boilerplate, vendored library update).
 - **Squash-merge is the default.** Branches are short-lived; `main` is always the integration point.
 - **Never bypass hooks.** No `--no-verify`, no `--no-gpg-sign`. If a hook fails, fix the underlying problem.
@@ -130,7 +132,7 @@ Default Definition of Done:
 - [ ] PR title is a valid Conventional Commit, and is about *why* (not *what*)
 - [ ] `## Why` in the PR body explains the motivation (it becomes the squash-merge commit body)
 - [ ] Documentation updated if user-visible behavior or API changed
-- [ ] No `Co-Authored-By:` lines for AI assistants
+- [ ] AI-assistant attribution per AGENTS.md (no AI `Co-Authored-By:` trailers on commits *you* author; bot-authored Copilot/OpenHands PRs are exempt — bot as `Author` + human as `Co-authored-by:` is the agreed pattern)
 - [ ] All Acceptance Criteria boxes ticked
 - [ ] PR is **one concern**, reviewable in one sitting, independently revertable, with self-contained tests (LOC > ~200 is a warning sign — audit against these criteria and flag in the PR body with rationale if the overrun is justified)
 
@@ -169,7 +171,7 @@ This can happen at triage (spotted upfront, the canonical case) or mid-implement
 - **Bundling unrelated changes in one PR.** Open a separate issue and PR.
 - **Skipping hooks** (`--no-verify`, `--no-gpg-sign`). Fix the underlying failure instead.
 - **Floating tags on GitHub Actions** (`@v6`, `@main`). Always pin a SHA.
-- **`Co-Authored-By:` trailers for AI assistants.** Commits are attributed to the human author only.
+- **`Co-Authored-By:` trailers for AI assistants on commits *you* author.** Bot-authored PRs from Copilot / OpenHands are the exception — see *AI-assistant attribution* under PR conventions.
 - **Speculative refactors during a fix.** A bug fix doesn't need surrounding cleanup; if cleanup is warranted, open a separate issue.
 - **Editing files outside the issue's listed scope.** Comment on the issue and wait instead of silently expanding.
 - **Inventing API or library facts.** If you cannot cite a source for a claim about how something works, do not include it.
@@ -180,6 +182,7 @@ This can happen at triage (spotted upfront, the canonical case) or mid-implement
 
 - Entry point: [`.github/copilot-instructions.md`](.github/copilot-instructions.md) (a thin pointer back to this file).
 - Dev-environment bootstrap: [`.github/workflows/copilot-setup-steps.yml`](.github/workflows/copilot-setup-steps.yml) — installs Go and pre-downloads module deps in Copilot's ephemeral runner.
+- **Copilot code-review** is planned to be enabled repo-wide (manual post-merge step: Settings → Code & automation → Code review). Once enabled, Copilot automatically posts a review when a PR is marked ready-for-review. Treat Copilot's review as an additional signal — a second pair of eyes from a different model layer — alongside the canonical human / Claude review that follows [`.agents/skills/review.md`](.agents/skills/review.md). The skill's review is the one that drives merge; Copilot's is input, not verdict. *Enablement is currently a manual UI step* (Settings → Code & automation → Code review → enable Copilot auto-review) since GitHub has no documented API for it yet; revisit when one appears.
 
 ### OpenHands
 

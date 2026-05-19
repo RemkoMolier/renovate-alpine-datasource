@@ -52,7 +52,7 @@ body:
         - [ ] PR title is a valid Conventional Commit, and is about *why* (not *what*)
         - [ ] `## Why` in the PR body explains the motivation (it becomes the squash-merge commit body)
         - [ ] Documentation updated if user-visible behavior or API changed
-        - [ ] No `Co-Authored-By:` lines for AI assistants
+        - [ ] AI-assistant attribution per AGENTS.md (no AI `Co-Authored-By:` trailers on commits *you* author; bot-authored Copilot/OpenHands PRs are exempt — bot as `Author` + human as `Co-authored-by:` is the agreed pattern)
         - [ ] All Acceptance Criteria boxes ticked
         - [ ] PR is **one concern**, reviewable in one sitting, independently revertable, with self-contained tests (LOC > ~200 is a warning sign — audit against these criteria and flag in the PR body with rationale if the overrun is justified)
     validations:
