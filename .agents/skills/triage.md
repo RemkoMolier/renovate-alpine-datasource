@@ -122,7 +122,7 @@ If you're under 200 LOC but the issue feels sprawling: still decompose. Small PR
    ```sh
    B_ID=$(gh api graphql -f query='{ repository(owner:"'$GH_OWNER'",name:"'$GH_REPO'") { issue(number:'$B') { id } } }' --jq .data.repository.issue.id)
    A_ID=$(gh api graphql -f query='{ repository(owner:"'$GH_OWNER'",name:"'$GH_REPO'") { issue(number:'$A') { id } } }' --jq .data.repository.issue.id)
-   gh api graphql -f query='mutation { addBlockedBy(input: {issueId:"'$B_ID'", blockedByIssueId:"'$A_ID'"}) { issue { number } } }'
+   gh api graphql -f query='mutation { addBlockedBy(input: {issueId:"'$B_ID'", blockingIssueId:"'$A_ID'"}) { issue { number } } }'
    ```
 6. Remove `triage` from the parent. The presence of sub-issues itself signals "this is a parent" — no separate label needed (triage's step 0 detects parents via `subIssuesSummary.total > 0`).
 7. Each child re-enters the inbox as a normal agent-task issue. Triage will skip blocked children until their blockers merge.
