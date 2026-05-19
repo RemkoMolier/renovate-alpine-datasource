@@ -52,6 +52,12 @@ type Manifest struct {
 // combination (§9). Consumers use ETag / LastModified for HTTP conditional
 // requests and CommitDesc for DESCRIPTION short-circuiting so they don't
 // re-fetch unchanged APKINDEX data.
+//
+// This is intentionally a separate type from apkindex.RepoTag — the apkindex
+// package owns the HTTP-layer shape (no serialization concerns), while the
+// store package owns the JSON-persisted shape (json struct tags). The two
+// stay in sync because both represent the same §9 contract; the sweep
+// orchestrator (#28) translates between them at the package boundary.
 type RepoTag struct {
 	ETag       string `json:"etag"`
 	LastMod    string `json:"lastModified"`

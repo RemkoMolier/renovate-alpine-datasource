@@ -37,7 +37,7 @@ type RepoTag struct {
 //
 // On HTTP 200 with a different DESCRIPTION commit id (or on the first
 // fetch where prev.CommitDesc is empty): returns (records, newTag, true, nil).
-func Fetch(ctx context.Context, client *http.Client, url string, prev RepoTag) ([]Record, RepoTag, bool, error) {
+func Fetch(ctx context.Context, client *http.Client, url string, prev RepoTag) (records []Record, next RepoTag, changed bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, RepoTag{}, false, fmt.Errorf("apkindex: create request: %w", err)
@@ -60,7 +60,7 @@ func Fetch(ctx context.Context, client *http.Client, url string, prev RepoTag) (
 		}
 	}()
 
-	next := RepoTag{
+	next = RepoTag{
 		ETag:    resp.Header.Get("ETag"),
 		LastMod: resp.Header.Get("Last-Modified"),
 	}
