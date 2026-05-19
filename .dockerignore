@@ -1,0 +1,10 @@
+.git/
+.github/
+.agents/
+.openhands/
+docs/
+*.md
+Makefile
+.golangci.yml
+.testcoverage.yml
+cover.out
