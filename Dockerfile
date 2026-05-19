@@ -6,11 +6,7 @@ WORKDIR /src
 COPY . .
 
 RUN mkdir -p /out && \
-    if [ -d ./cmd/renovate-alpine-datasource ]; then \
-      CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/renovate-alpine-datasource ./cmd/renovate-alpine-datasource; \
-    else \
-      CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/renovate-alpine-datasource .; \
-    fi
+    CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/renovate-alpine-datasource .
 
 # gcr.io/distroless/static-debian12:nonroot
 FROM gcr.io/distroless/static-debian12@sha256:d093aa3e30dbadd3efe1310db061a14da60299baff8450a17fe0ccc514a16639
