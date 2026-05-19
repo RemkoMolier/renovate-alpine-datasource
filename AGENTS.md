@@ -82,7 +82,7 @@ Direct pushes to `main` are blocked; every change lands via PR. Force-pushes to 
 
 ### Repo settings beyond branch protection
 
-- **Workflow approval for first-time contributors.** The repo's Actions → *Fork pull request workflows from outside collaborators* setting is `first_time_contributors_new_to_github` (not the stricter `first_time_contributors`). This means Copilot's bot pushes trigger `action_required` on the first commit of a new PR but not on subsequent pushes — the looser setting avoids requiring manual `gh run rerun <id>` on every amend. If the setting ever reverts (e.g. repo re-creation), re-apply it via the repo Settings UI or the GitHub Actions permissions API.
+- **Workflow approval for first-time contributors.** The repo's Actions → *Fork pull request workflows from outside collaborators* setting is `first_time_contributors_new_to_github` (not the stricter `first_time_contributors`). This means Copilot's bot pushes can still trigger `action_required` on the first commit of a new PR, in which case a one-time manual `gh run rerun <id>` is still required; subsequent pushes on that PR auto-run, so the looser setting avoids needing a manual rerun on every amend. For archaeology, the corresponding API write is `gh api -X PUT repos/$GH_OWNER/$GH_REPO/actions/permissions/fork-pr-contributor-approval -f approval_policy=first_time_contributors_new_to_github`. If the setting ever reverts (e.g. repo re-creation), re-apply it via the repo Settings UI or that API endpoint.
 
 ## Don't-touch zones
 
