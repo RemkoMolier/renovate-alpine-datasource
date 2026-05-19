@@ -32,7 +32,7 @@ func Parse(r io.Reader) (records []Record, commitDesc string, err error) {
 	}
 	defer func() {
 		if cerr := gzReader.Close(); cerr != nil && err == nil {
-			err = cerr
+			err = fmt.Errorf("apkindex: gzip close: %w", cerr)
 		}
 	}()
 
@@ -84,13 +84,13 @@ func parseAPKINDEX(r io.Reader) ([]Record, error) {
 			continue
 		}
 
-		if cur == nil {
-			cur = &Record{}
-		}
-
 		k, v, ok := strings.Cut(line, ":")
 		if !ok {
 			continue
+		}
+
+		if cur == nil {
+			cur = &Record{}
 		}
 
 		switch k {

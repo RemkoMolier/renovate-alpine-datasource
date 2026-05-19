@@ -247,6 +247,42 @@ func TestParseMissingOptionalFields(t *testing.T) {
 	}
 }
 
+func TestParseMalformedLine(t *testing.T) {
+	// A non-empty line missing a colon should be silently skipped
+	// and must not produce a zero-value Record.
+	apkindex := strings.Join([]string{
+		"malformed_line_no_colon",
+		"P:good",
+		"V:1.0",
+		"",
+		"P:also-good",
+		"V:2.0",
+		"",
+	}, "\n") + "\n"
+
+	files := map[string]string{
+		"APKINDEX":    apkindex,
+		"DESCRIPTION": "abc\n",
+	}
+
+	data := buildTarGz(files)
+	records, _, err := Parse(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("Parse: unexpected error: %v", err)
+	}
+
+	if want, got := 2, len(records); want != got {
+		t.Fatalf("record count: want %d, got %d", want, got)
+	}
+
+	wantNames := []string{"good", "also-good"}
+	for i, want := range wantNames {
+		if records[i].Name != want {
+			t.Errorf("record[%d]: Name: want %q, got %q", i, want, records[i].Name)
+		}
+	}
+}
+
 func TestParseDescriptionOnly(t *testing.T) {
 	// APKINDEX tar.gz without APKINDEX file (just DESCRIPTION).
 	files := map[string]string{
