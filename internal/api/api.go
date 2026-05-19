@@ -39,15 +39,15 @@ func (a *API) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *API) handleReadyz(w http.ResponseWriter, _ *http.Request) {
-	if !a.isReady() {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte("not ready"))
+	if a.isReady() {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ready"))
 
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ready"))
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_, _ = w.Write([]byte("not ready"))
 }
 
 func (a *API) isReady() bool {

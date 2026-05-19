@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// TODO(#7): replace with --addr flag value.
 	defaultAddr     = ":8080"
 	shutdownTimeout = 5 * time.Second
 )
