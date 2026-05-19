@@ -1,0 +1,10 @@
+# Built binaries
+/renovate-alpine-datasource
+
+# Test / coverage output
+*.out
+*.test
+coverage.*
+
+# GoReleaser output
+/dist/

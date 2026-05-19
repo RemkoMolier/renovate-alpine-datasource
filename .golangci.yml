@@ -1,0 +1,28 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # The "standard" set enables errcheck, govet, ineffassign, staticcheck, and
+  # unused — the same diagnostics gopls surfaces by default.
+  default: standard
+  enable:
+    - unparam        # gopls "unusedparams"
+    - usestdlibvars  # gopls modernize-style suggestion
+    - intrange       # gopls modernize: Go 1.22 range-over-int
+    - copyloopvar    # gopls modernize: Go 1.22 loop-var capture
+  settings:
+    govet:
+      # Turn on every vet analyzer so we cover the full set gopls runs.
+      enable-all: true
+      disable:
+        - fieldalignment  # off in gopls by default; very noisy in practice
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true  # mirrors gopls' simplify{compositelit,range,slice,var}
