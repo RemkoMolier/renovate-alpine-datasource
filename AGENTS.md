@@ -62,7 +62,7 @@ Prefer minimal, surgical changes over broad refactors. If you find yourself fixi
 - **SHA-pin every new GitHub Action.** Format: `org/repo@<full-commit-sha> # vX.Y.Z`. The trailing version comment is what Renovate / Dependabot use to surface updates. See [Adding a GitHub Action](#recipe-adding-a-github-action) for the exact procedure.
 - **AI-assistant attribution.** For commits *you* author (with AI assistance from Claude, Cursor, IDE Copilot completion, etc.), do not add `Co-Authored-By:` lines for the AI — the human is the sole author. Bot-authored PRs from agents that produce their own commits (Copilot's coding agent, OpenHands Cloud) are different: those commits' `Author` is the bot, with the human assigner appended as `Co-authored-by:`. That pattern is allowed and preserves the audit trail of which agent did the work.
 - **Reviewer scope.** Reviewers only leave feedback — comments, suggestion blocks, and an approve / request-changes / comment verdict. They do **not** edit the PR description, push fixup commits to the author's branch, or otherwise amend the author's work. Every change to the PR goes through the author (or the dispatched agent), even typos. The agent or human author owns the PR end-to-end. See [`.agents/skills/review.md`](.agents/skills/review.md).
-- **Squash-merge commit body comes from the PR's `## Why` section.** The repo is configured with `squash_merge_commit_title = PR_TITLE` and `squash_merge_commit_message = PR_BODY`, so the merged commit on `main` is `<conventional commit title>` + the PR body. The alternative (`COMMIT_MESSAGES`) concatenates every branch commit including bot placeholder commits, debug trailers, and duplicate `Co-authored-by` lines — not the history we want.
+- **Squash-merge commit body comes from the PR's `## Why` section.** The repo is configured with `squash_merge_commit_title = PR_TITLE` and `squash_merge_commit_message = PR_BODY`, so the merged commit on `main` is `<conventional commit title>` + the PR body. The alternative (`COMMIT_MESSAGES`) concatenates every branch commit including bot placeholder commits, debug trailers, and duplicate `Co-authored-by` lines — not the history we want. For bot-authored PRs (Copilot, OpenHands), the squash-merge commit's `Author` becomes the bot identity (e.g. `copilot-swe-agent[bot]` or `openhands <openhands@all-hands.dev>`), not the maintainer who merged it. This is expected and preserves the audit trail: the bot did the work, the human reviewed and merged.
 - **PRs are one concern, reviewable in one sitting, independently revertable, with self-contained tests.** Prefer vertical slices (a thin end-to-end change) over horizontal layers (build the data model first, then the API, then the wiring) — vertical slices ship value and get exercised end-to-end; horizontal layers batch risk. PRs over ~200 LOC of diff are a warning sign to audit against these criteria; flag in the description with rationale if you decided the overrun was justified (e.g. cohesive boilerplate, vendored library update).
 - **Squash-merge is the default.** Branches are short-lived; `main` is always the integration point.
 - **Never bypass hooks.** No `--no-verify`, no `--no-gpg-sign`. If a hook fails, fix the underlying problem.
@@ -79,6 +79,10 @@ Prefer minimal, surgical changes over broad refactors. If you find yourself fixi
 - `Validate Conventional Commits format`
 
 Direct pushes to `main` are blocked; every change lands via PR. Force-pushes to `main` are blocked unconditionally. If you need to update branch protection rules, edit them via `gh api repos/$GH_OWNER/$GH_REPO/branches/main/protection` and document the change in a PR that updates this section.
+
+### Repo settings beyond branch protection
+
+- **Workflow approval for first-time contributors.** The repo's Actions → *Fork pull request workflows from outside collaborators* setting is `first_time_contributors_new_to_github` (not the stricter `first_time_contributors`). This means Copilot's bot pushes can still trigger `action_required` on the first commit of a new PR, in which case a one-time manual `gh run rerun <id>` is still required; subsequent pushes on that PR auto-run, so the looser setting avoids needing a manual rerun on every amend. For archaeology, the corresponding API write is `gh api -X PUT repos/$GH_OWNER/$GH_REPO/actions/permissions/fork-pr-contributor-approval -f approval_policy=first_time_contributors_new_to_github`. If the setting ever reverts (e.g. repo re-creation), re-apply it via the repo Settings UI or that API endpoint.
 
 ## Don't-touch zones
 
@@ -178,17 +182,32 @@ This can happen at triage (spotted upfront, the canonical case) or mid-implement
 
 ## Per-agent notes
 
+### Review coverage matrix
+
+The shape of "who reviews whom" depending on the PR author, and what verdicts are available to the maintainer reviewer:
+
+| Author     | Copilot auto-reviews? | Maintainer can `--approve` / `--request-changes`? |
+|------------|-----------------------|---------------------------------------------------|
+| Human      | yes                   | yes                                               |
+| OpenHands  | yes                   | **no — GitHub blocks** (PR appears authored by the dispatching maintainer) |
+| Copilot    | **no — self-review block** | yes                                           |
+
 ### Copilot
 
 - Entry point: [`.github/copilot-instructions.md`](.github/copilot-instructions.md) (a thin pointer back to this file).
 - Dev-environment bootstrap: [`.github/workflows/copilot-setup-steps.yml`](.github/workflows/copilot-setup-steps.yml) — installs Go and pre-downloads module deps in Copilot's ephemeral runner.
-- **Copilot code-review** is planned to be enabled repo-wide (manual post-merge step: Settings → Code & automation → Code review). Once enabled, Copilot automatically posts a review when a PR is marked ready-for-review. Treat Copilot's review as an additional signal — a second pair of eyes from a different model layer — alongside the canonical human / Claude review that follows [`.agents/skills/review.md`](.agents/skills/review.md). The skill's review is the one that drives merge; Copilot's is input, not verdict. *Enablement is currently a manual UI step* (Settings → Code & automation → Code review → enable Copilot auto-review) since GitHub has no documented API for it yet; revisit when one appears.
+- **Copilot code-review** is enabled repo-wide (Settings → Code & automation → Code review). Copilot automatically posts a review when a PR is marked ready-for-review. Treat Copilot's review as an additional signal — a second pair of eyes from a different model layer — alongside the canonical human / Claude review that follows [`.agents/skills/review.md`](.agents/skills/review.md). The skill's review is the one that drives merge; Copilot's is input, not verdict.
+- **Auto-review gap.** Copilot's auto-review does *not* fire on PRs authored by Copilot itself (Copilot cannot review its own PRs). On human-authored and OpenHands-authored PRs, Copilot auto-review provides a useful second signal (refs PR [#20](https://github.com/RemkoMolier/renovate-alpine-datasource/pull/20) where it caught three real issues). On Copilot-authored PRs, this signal is absent. **Decision: accept the gap** (option (c)). Copilot-authored PRs require explicit maintainer review with extra rigor — the [Five red-flag pass](.agents/skills/review.md#five-red-flag-pass-agent-prs-first) *and* the [Standard pass](.agents/skills/review.md#standard-pass-all-prs) without Copilot's second pair of eyes. Alternatives (dispatching OpenHands as cross-agent reviewer, third-party tools) were considered and declined as premature until Copilot-authored PR volume warrants them.
+- **Conversation-resolution gate.** Copilot's auto-review threads must be resolved before merge (branch protection). When the reviewer-maintainer disagrees with a Copilot review finding, the workflow is: **reply with rationale, then resolve the thread**. Do not leave threads unresolved in the hope that Copilot will learn — it won't. Do not approve with unresolved review threads; the branch-protection gate will reject the merge. (See `.agents/skills/review.md` *Disputing Copilot auto-review threads* for the full procedure.)
 
 ### OpenHands
 
 - Primary context: this file (`AGENTS.md`) — OpenHands reads it on every session.
 - Session bootstrap: [`.openhands/setup.sh`](.openhands/setup.sh) — runs at the start of every session. The default OpenHands runtime image (python-nodejs) does not include Go, so the script installs the latest Go release from go.dev (only on first run; cached after that), then downloads Go module deps.
 - Domain-specific knowledge that should only load when relevant lives under [`.agents/skills/`](.agents/skills/); load on demand.
+- **Author identity.** The OpenHands GitHub App opens PRs **under the dispatching maintainer's identity** (the GitHub user who authorized the App and triggered the dispatch). GitHub therefore treats the PR's `author` field as the maintainer, even though the actual git commit `Author` on the branch is `openhands <openhands@all-hands.dev>`. This is different from Copilot, which opens PRs under its own bot identity (`copilot-swe-agent[bot]`).
+- **Self-review block.** Because OpenHands PRs appear authored by the maintainer, GitHub blocks `Approve` and `Request Changes` reviews by that same maintainer — you cannot approve or block your own PR. Only `Comment` is available. The workaround is documented in [`.agents/skills/review.md`](.agents/skills/review.md): use `--comment` and label blocking findings as `Critical` / `Important` in the review body so the author (OpenHands) can act on them as if they were a Request-Changes verdict.
+- **Branch protection consequence.** The `required_approving_review_count` branch-protection setting cannot be raised above 0 while OpenHands is an active routing option — a required review count of 1 would deadlock every OpenHands PR because the maintainer cannot satisfy it. This is accepted as a known limitation of the current OpenHands App architecture. If GitHub ever allows the App to open PRs under a separate bot identity, revisit.
 
 ## Skills
 
