@@ -6,16 +6,20 @@ The procedure for reviewing a PR in this repository, whether the author is a hum
 
 ## Before you start
 
-1. **Identify the author type** from the PR's author field:
-   - A human (maintainer or contributor) → straight to the [Standard pass](#standard-pass).
+1. **Identify the author type.** The PR's `author` field on GitHub is unreliable for this — OpenHands PRs appear authored by the dispatching maintainer. Use the git commit author instead:
+   ```sh
+   git log --format='%an <%ae>' origin/main..HEAD
+   ```
+   - Human committer (your name, another contributor) → straight to the [Standard pass](#standard-pass).
    - `copilot-swe-agent[bot]` → Copilot coding agent → run the [Five red-flag pass](#five-red-flag-pass-agent-prs-first) first.
-   - The OpenHands GitHub App → OpenHands Cloud → same red-flag pass first.
-2. **Pull the branch and run the required gates locally** — reading the diff is not a substitute for seeing the code execute:
+   - `openhands <openhands@all-hands.dev>` → OpenHands Cloud → same red-flag pass first.
+2. **If this is an OpenHands-authored PR, plan for the self-review block.** GitHub treats OpenHands PRs as authored by the dispatching maintainer (the PR's `author` field is your own GitHub identity). This means you cannot submit `--approve` or `--request-changes` — only `--comment`. Use `--comment` with the normal review body; label blocking findings as `Critical` / `Important` per the severity vocab below. The author (OpenHands) treats those severity labels as if they were a Request-Changes verdict and addresses them before re-requesting review. See [AGENTS.md `### OpenHands`](../../AGENTS.md#openhands).
+3. **Pull the branch and run the required gates locally** — reading the diff is not a substitute for seeing the code execute:
    ```sh
    gh pr checkout <n>
    make verify
    ```
-3. **Build context.** Read the linked issue (`gh issue view <n>`), the PR body's `## Why` section, and the surrounding files the diff touches. *Understanding the change is the single biggest review challenge* (Bacchelli & Bird, ICSE 2013). Invest time here before commenting.
+4. **Build context.** Read the linked issue (`gh issue view <n>`), the PR body's `## Why` section, and the surrounding files the diff touches. *Understanding the change is the single biggest review challenge* (Bacchelli & Bird, ICSE 2013). Invest time here before commenting.
 
 ## Five red-flag pass (agent PRs first)
 
@@ -117,12 +121,28 @@ if cfg == nil { return ErrNilConfig }
 ```'
 ```
 
+**For OpenHands-authored PRs**, use `--comment` instead of `--approve` or `--request-changes` — GitHub blocks the other verdicts because the PR appears authored by you (the dispatching maintainer). Label blocking findings as `Critical` / `Important` in the review body so the severity is explicit despite the `--comment` verdict.
+
 **Always batch into one review** (`gh api .../reviews` or "Start a review" in the UI). Drip-feeding individual comments notifies the author N times for N findings and fragments the response.
 
 Reply to an existing review thread:
 ```sh
 gh api repos/$GH_OWNER/$GH_REPO/pulls/<n>/comments/<comment-id>/replies -X POST -f body='...'
 ```
+
+## Disputing Copilot auto-review threads
+
+Copilot auto-review threads must be resolved before merge (branch protection blocks merge on unresolved threads). When reviewing a PR and you disagree with a Copilot auto-review finding:
+
+1. **Reply to the thread** with your technical rationale. Cite the specific rule from AGENTS.md or the relevant skill that supports your position.
+2. **Resolve the thread** immediately. Leaving it unresolved signals to the author (or other reviewers) that an open issue remains, when in fact the reviewer-maintainer has decided it's not actionable. Copilot does not learn from your resolution — there is no need to leave threads open for educational purposes.
+3. **If you partially agree** (e.g. Copilot spotted a real smell but proposed the wrong fix), reply with what you *do* agree on, explain the better fix, and move that fix to your own review body (as an `issue (blocking):` or `suggestion:` line). Then resolve the Copilot thread — your review body now owns the corrected finding.
+
+**Worked example** (PR [#20](https://github.com/RemkoMolier/renovate-alpine-datasource/pull/20), panic-in-test-helper thread):
+- Copilot flagged a `panic` in a test helper as a convention violation.
+- The reviewer-maintainer replied: the test helper itself does not panic — the *test* calls `t.Fatalf`, which is the standard pattern and not a goroutine crossing. The finding was a false positive.
+- The reviewer resolved the thread immediately after the reply.
+- Outcome: maintainer recorded the correct position; merge was not blocked.
 
 ## Verdicts
 
@@ -145,4 +165,5 @@ gh api repos/$GH_OWNER/$GH_REPO/pulls/<n>/comments/<comment-id>/replies -X POST 
 - Reviewing a PR over the size cap without first requesting a split.
 - Drip-feeding single comments instead of batching one review.
 - Approving an agent-produced PR without running the Five red-flag pass.
+- Attempting `--approve` or `--request-changes` on an OpenHands-authored PR — GitHub will reject it; use `--comment` with severity labels instead (see *Before you start*).
 - **Editing the PR description, pushing fixup commits to the author's branch, or otherwise amending the author's work** — every change to the PR goes through the author, even typos. See AGENTS.md → *PR conventions → Reviewer scope*.
